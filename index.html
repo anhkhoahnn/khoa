@@ -5,67 +5,108 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Link nhanh</title>
 <style>
-  :root{color-scheme:light dark;--bg:#f5f5f7;--card:#fff;--tx:#1d1d1f;--mut:#6e6e73;--ac:#0071e3}
+  :root{color-scheme:light dark;--bg:#f5f5f7;--card:#fff;--tx:#1d1d1f;--mut:#6e6e73;--ac:#0071e3;--red:#ff453a}
   @media(prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--tx:#f5f5f7;--mut:#98989d;--ac:#2997ff}}
   *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--tx);font:16px -apple-system,system-ui,sans-serif;padding:20px}
-  .card{width:100%;max-width:420px;background:var(--card);border-radius:20px;padding:24px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
-  h1{font-size:20px;margin:0 0 16px}
-  input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--mut);background:transparent;color:var(--tx);font-size:16px}
-  .url{margin:16px 0;padding:14px;border-radius:12px;background:var(--bg);word-break:break-all;font-size:15px;color:var(--mut);min-height:48px}
-  .btn{display:block;width:100%;padding:16px;margin-top:10px;border:0;border-radius:14px;font-size:17px;font-weight:600;text-align:center;text-decoration:none;cursor:pointer}
+  body{margin:0;min-height:100vh;display:flex;justify-content:center;background:var(--bg);color:var(--tx);font:16px -apple-system,system-ui,sans-serif;padding:20px}
+  .card{width:100%;max-width:440px;background:var(--card);border-radius:20px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,.08);align-self:flex-start}
+  h1{font-size:20px;margin:0 0 14px}
+  h2{font-size:14px;color:var(--mut);margin:20px 0 8px;font-weight:600}
+  .row{display:flex;gap:8px}
+  input{flex:1;min-width:0;padding:14px;border-radius:12px;border:1px solid var(--mut);background:transparent;color:var(--tx);font-size:16px}
+  .btn{padding:14px;border:0;border-radius:12px;font-size:15px;font-weight:600;text-align:center;text-decoration:none;cursor:pointer;display:block}
   .primary{background:var(--ac);color:#fff}
   .second{background:var(--bg);color:var(--ac)}
-  .msg{text-align:center;margin-top:12px;font-size:14px;color:var(--mut);min-height:20px}
+  .del{background:var(--bg);color:var(--red)}
+  .item{background:var(--bg);border-radius:14px;padding:12px;margin-bottom:10px}
+  .item.cur{outline:2px solid var(--ac)}
+  .url{word-break:break-all;font-size:14px;margin-bottom:10px}
+  .tag{font-size:12px;color:var(--mut);margin-bottom:4px}
+  .acts{display:grid;grid-template-columns:1fr 1fr auto;gap:6px}
+  .acts .btn{padding:10px 4px;font-size:13px;background:var(--card);color:var(--ac)}
+  .acts .btn.del{color:var(--red);padding:10px 12px}
+  .msg{text-align:center;margin-top:10px;font-size:14px;color:var(--mut);min-height:20px}
+  .empty{color:var(--mut);font-size:14px;text-align:center;padding:12px}
 </style>
 </head>
 <body>
 <div class="card">
   <h1 id="ttl">🔗 Link của bạn</h1>
-  <input id="inp" type="url" inputmode="url" placeholder="Dán link vào đây (https://...)" autocomplete="off">
-  <div class="url" id="show">Chưa có link</div>
-  <button class="btn primary" id="copy">📋 Copy link</button>
-  <a class="btn second" id="open" href="#" target="_blank" rel="noopener">🌐 Mở link</a>
-  <a class="btn second" id="safari" href="#">🧭 Mở bằng Safari</a>
+  <div class="row">
+    <input id="inp" type="url" inputmode="url" placeholder="Dán link mới (https://...)" autocomplete="off">
+    <button class="btn primary" id="save">💾 Lưu</button>
+  </div>
   <div class="msg" id="msg"></div>
+
+  <div id="presetBox"></div>
+
+  <h2>Link đã lưu</h2>
+  <div id="list"></div>
 </div>
 <script>
-  // Đổi link mặc định ở đây:
   // Danh sách theo user: thêm dòng  tên: "link"
-  // Mở web bằng:  .../index.html?u=tên   (ví dụ ?u=an)
+  // Mở web bằng:  .../?u=tên   (ví dụ ?u=sang)
   var USERS = {
-  var USERS = {
-  sang:   "https://link-cua-an.com",
-  long: "https://link-cua-binh.com",
-  tung: "https://link-cua-khoa.com"
-};
+    // sang: "https://...",
+    // long: "https://...",
+    // tung: "https://..."
   };
-  var DEFAULT_LINK = "";
-  var qs=new URLSearchParams(location.search), UID=(qs.get('u')||location.hash.slice(1)||'').toLowerCase();
-  if(UID&&USERS[UID])DEFAULT_LINK=USERS[UID];
-  var inp=document.getElementById('inp'),show=document.getElementById('show'),
-      openA=document.getElementById('open'),saf=document.getElementById('safari'),msg=document.getElementById('msg');
-  var link=DEFAULT_LINK;
-  if(!(UID&&USERS[UID])){try{link=localStorage.getItem('link')||link}catch(e){}}
+
+  var qs=new URLSearchParams(location.search);
+  var UID=(qs.get('u')||location.hash.slice(1)||'').toLowerCase();
+  var KEY='links_'+(UID||'default');
+  var msg=document.getElementById('msg'),inp=document.getElementById('inp');
+
   function norm(u){u=(u||'').trim();if(u&&!/^https?:\/\//i.test(u))u='https://'+u;return u}
-  function render(){
-    link=norm(link);inp.value=link;
-    show.textContent=link||'Chưa có link';
-    openA.href=link||'#';
-    saf.href=link?link.replace(/^https:/i,'x-safari-https:').replace(/^http:/i,'x-safari-http:'):'#';
-    try{localStorage.setItem('link',link)}catch(e){}
-  }
-  inp.addEventListener('input',function(){link=inp.value;show.textContent=norm(link)||'Chưa có link';
-    openA.href=norm(link)||'#';var n=norm(link);
-    saf.href=n?n.replace(/^https:/i,'x-safari-https:').replace(/^http:/i,'x-safari-http:'):'#';
-    try{localStorage.setItem('link',n)}catch(e){}});
-  document.getElementById('copy').addEventListener('click',async function(){
-    var t=norm(link);if(!t){msg.textContent='Hãy dán link trước';return}
+  function safariUrl(u){return u.replace(/^https:/i,'x-safari-https:').replace(/^http:/i,'x-safari-http:')}
+  function load(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}}
+  function store(a){try{localStorage.setItem(KEY,JSON.stringify(a))}catch(e){}}
+  function esc(s){return s.replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+  async function copy(t){
     try{await navigator.clipboard.writeText(t);msg.textContent='✅ Đã copy!'}
-    catch(e){inp.value=t;inp.focus();inp.select();inp.setSelectionRange(0,99999);
-      try{document.execCommand('copy');msg.textContent='✅ Đã copy!'}catch(_){msg.textContent='Giữ vào ô link rồi chọn Copy'}}
+    catch(e){
+      var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);ta.focus();ta.select();ta.setSelectionRange(0,99999);
+      try{document.execCommand('copy');msg.textContent='✅ Đã copy!'}catch(_){msg.textContent='Không copy được, hãy giữ vào link để copy'}
+      document.body.removeChild(ta);
+    }
+  }
+
+  function itemHtml(u,tag,idx,isCur){
+    return '<div class="item'+(isCur?' cur':'')+'">'+(tag?'<div class="tag">'+tag+'</div>':'')+
+      '<div class="url">'+esc(u)+'</div><div class="acts">'+
+      '<a class="btn" href="'+esc(u)+'" target="_blank" rel="noopener">🌐 Mở</a>'+
+      '<a class="btn" href="'+esc(safariUrl(u))+'">🧭 Safari</a>'+
+      (idx>=0?'<button class="btn del" data-del="'+idx+'">🗑</button>':'<span></span>')+
+      '</div></div>';
+  }
+
+  function render(){
+    var pb=document.getElementById('presetBox');
+    if(UID&&USERS[UID]){
+      document.getElementById('ttl').textContent='🔗 Link của '+UID;
+      pb.innerHTML='<h2>Link chính</h2>'+itemHtml(USERS[UID],'',-1,true);
+    }else pb.innerHTML='';
+    var a=load(),l=document.getElementById('list');
+    l.innerHTML=a.length?a.map(function(u,i){return itemHtml(u,i===0?'Mới nhất':'',i,false)}).join(''):'<div class="empty">Chưa có link nào. Dán link rồi bấm Lưu.</div>';
+  }
+
+  document.getElementById('save').addEventListener('click',function(){
+    var u=norm(inp.value);
+    if(!u){msg.textContent='Hãy dán link trước';return}
+    var a=load().filter(function(x){return x!==u});
+    a.unshift(u);store(a.slice(0,50));
+    inp.value='';msg.textContent='✅ Đã lưu';render();
   });
-  if(UID&&USERS[UID])document.getElementById('ttl').textContent='🔗 Link của '+UID;
+  inp.addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('save').click()});
+
+  document.addEventListener('click',function(e){
+    var c=e.target.closest('[data-copy]');if(c){copy(c.getAttribute('data-copy'));return}
+    var d=e.target.closest('[data-del]');
+    if(d){var a=load();a.splice(+d.getAttribute('data-del'),1);store(a);msg.textContent='Đã xóa';render()}
+  });
+
   render();
 </script>
 </body>
