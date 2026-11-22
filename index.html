@@ -34,8 +34,11 @@
   // Danh sách theo user: thêm dòng  tên: "link"
   // Mở web bằng:  .../index.html?u=tên   (ví dụ ?u=an)
   var USERS = {
-    // an: "https://example.com/link-cua-an",
-    // binh: "https://example.com/link-cua-binh"
+  var USERS = {
+  sang:   "https://link-cua-an.com",
+  long: "https://link-cua-binh.com",
+  tung: "https://link-cua-khoa.com"
+};
   };
   var DEFAULT_LINK = "";
   var qs=new URLSearchParams(location.search), UID=(qs.get('u')||location.hash.slice(1)||'').toLowerCase();
